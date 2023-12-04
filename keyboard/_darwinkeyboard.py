@@ -26,13 +26,13 @@ class KeyMap(object):
         0x31: 'space',
         0x33: 'delete',
         0x35: 'escape',
-        0x37: 'command',
-        0x38: 'shift',
+        0x37: 'left command',
+        0x38: 'left shift',
         0x39: 'capslock',
-        0x3a: 'option',
-        0x3b: 'control',
+        0x3a: 'left alt',
+        0x3b: 'left control',
         0x3c: 'right shift',
-        0x3d: 'right option',
+        0x3d: 'right alt',
         0x3e: 'right control',
         0x3f: 'function',
         0x40: 'f17',
@@ -135,8 +135,10 @@ class KeyMap(object):
         # Generate character representations of key codes
         for key_code in range(0, 128):
             # TODO - Possibly add alt modifier to key map
-            non_shifted_char = UniChar4()
+            non_modified_char = UniChar4()
             shifted_char = UniChar4()
+            option_char = UniChar4()
+            option_shifted_char = UniChar4()
             keys_down = ctypes.c_uint32()
             char_count = UniCharCount()
 
@@ -149,9 +151,9 @@ class KeyMap(object):
                                            ctypes.byref(keys_down),
                                            4,
                                            ctypes.byref(char_count),
-                                           non_shifted_char)
+                                           non_modified_char)
 
-            non_shifted_key = u''.join(unichr(non_shifted_char[i]) for i in range(char_count.value))
+            non_modified_key = u''.join(unichr(non_modified_char[i]) for i in range(char_count.value))
 
             retval = Carbon.UCKeyTranslate(k_layout_buffer,
                                            key_code,
@@ -166,7 +168,33 @@ class KeyMap(object):
 
             shifted_key = u''.join(unichr(shifted_char[i]) for i in range(char_count.value))
 
-            self.layout_specific_keys[key_code] = (non_shifted_key, shifted_key)
+            retval = Carbon.UCKeyTranslate(k_layout_buffer,
+                                           key_code,
+                                           kUCKeyActionDisplay,
+                                           optionKey >> 8, # Option
+                                           Carbon.LMGetKbdType(),
+                                           kUCKeyTranslateNoDeadKeysBit,
+                                           ctypes.byref(keys_down),
+                                           4,
+                                           ctypes.byref(char_count),
+                                           option_char)
+
+            option_key = u''.join(unichr(option_char[i]) for i in range(char_count.value))
+
+            retval = Carbon.UCKeyTranslate(k_layout_buffer,
+                                           key_code,
+                                           kUCKeyActionDisplay,
+                                           optionKey >> 8 | shiftKey >> 8, # Option+Shift
+                                           Carbon.LMGetKbdType(),
+                                           kUCKeyTranslateNoDeadKeysBit,
+                                           ctypes.byref(keys_down),
+                                           4,
+                                           ctypes.byref(char_count),
+                                           option_shifted_char)
+
+            option_shifted_key = u''.join(unichr(option_shifted_char[i]) for i in range(char_count.value))
+
+            self.layout_specific_keys[key_code] = (non_modified_key, shifted_key, option_key, option_shifted_key)
         # Cleanup
         Carbon.CFRelease(klis)
 
@@ -181,6 +209,10 @@ class KeyMap(object):
                 return (vk, [])
             elif self.layout_specific_keys[vk][1] == character:
                 return (vk, ['shift'])
+            elif self.layout_specific_keys[vk][2] == character:
+                return (vk, ['alt'])
+            elif self.layout_specific_keys[vk][3] == character:
+                return (vk, ['alt', 'shift'])
         raise ValueError("Unrecognized character: {}".format(character))
 
     def vk_to_character(self, vk, modifiers=[]):
@@ -190,8 +222,12 @@ class KeyMap(object):
             # Not a character
             return self.non_layout_keys[vk]
         elif vk in self.layout_specific_keys:
-            if 'shift' in modifiers:
+            if modifiers == ['shift']:
                 return self.layout_specific_keys[vk][1]
+            elif modifiers == ['alt']:
+                return self.layout_specific_keys[vk][2]
+            elif sorted(modifiers) == ['alt', 'shift']:
+                return self.layout_specific_keys[vk][3]
             return self.layout_specific_keys[vk][0]
         else:
             # Invalid vk
