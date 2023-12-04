@@ -1,5 +1,6 @@
 import ctypes
 import ctypes.util
+import objc
 import Quartz
 import time
 import os
@@ -126,13 +127,10 @@ class KeyMap(object):
 
         # Get keyboard layout
         klis = Carbon.TISCopyCurrentKeyboardInputSource()
-        k_layout = Carbon.TISGetInputSourceProperty(klis, kTISPropertyUnicodeKeyLayoutData)
-        if k_layout is None:
+        if klis is None:
             klis = Carbon.TISCopyCurrentASCIICapableKeyboardLayoutInputSource()
-            k_layout = Carbon.TISGetInputSourceProperty(klis, kTISPropertyUnicodeKeyLayoutData)
-        k_layout_size = Carbon.CFDataGetLength(k_layout)
-        k_layout_buffer = ctypes.create_string_buffer(k_layout_size) # TODO - Verify this works instead of initializing with empty string
-        Carbon.CFDataGetBytes(k_layout, CFRange(0, k_layout_size), ctypes.byref(k_layout_buffer))
+        k_layout = objc.objc_object(c_void_p=Carbon.TISGetInputSourceProperty(klis, ctypes.c_void_p.in_dll(Carbon, 'kTISPropertyUnicodeKeyLayoutData')))
+        k_layout_buffer = k_layout.bytes().tobytes()
 
         # Generate character representations of key codes
         for key_code in range(0, 128):
