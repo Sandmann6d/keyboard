@@ -134,7 +134,7 @@ Desktop.ini
 #############
 ## Python
 #############
-
+venv
 *.py[co]
 
 # Packages
