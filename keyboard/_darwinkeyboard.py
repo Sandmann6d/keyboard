@@ -26,13 +26,14 @@ class KeyMap(object):
         0x31: 'space',
         0x33: 'delete',
         0x35: 'escape',
-        0x37: 'left command',
+        0x36: 'left command',
+        0x37: 'right command',
         0x38: 'left shift',
         0x39: 'capslock',
-        0x3a: 'left alt',
+        0x3a: 'left option',
         0x3b: 'left control',
         0x3c: 'right shift',
-        0x3d: 'right alt',
+        0x3d: 'right option',
         0x3e: 'right control',
         0x3f: 'function',
         0x40: 'f17',
@@ -129,7 +130,7 @@ class KeyMap(object):
         klis = Carbon.TISCopyCurrentKeyboardInputSource()
         if klis is None:
             klis = Carbon.TISCopyCurrentASCIICapableKeyboardLayoutInputSource()
-        k_layout = objc.objc_object(c_void_p=Carbon.TISGetInputSourceProperty(klis, ctypes.c_void_p.in_dll(Carbon, 'kTISPropertyUnicodeKeyLayoutData')))
+        k_layout = objc.objc_object(c_void_p=Carbon.TISGetInputSourceProperty(klis, kTISPropertyUnicodeKeyLayoutData))
         k_layout_buffer = k_layout.bytes().tobytes()
 
         # Generate character representations of key codes
@@ -210,9 +211,9 @@ class KeyMap(object):
             elif self.layout_specific_keys[vk][1] == character:
                 return (vk, ['shift'])
             elif self.layout_specific_keys[vk][2] == character:
-                return (vk, ['alt'])
+                return (vk, ['option'])
             elif self.layout_specific_keys[vk][3] == character:
-                return (vk, ['alt', 'shift'])
+                return (vk, ['option', 'shift'])
         raise ValueError("Unrecognized character: {}".format(character))
 
     def vk_to_character(self, vk, modifiers=[]):
@@ -224,9 +225,9 @@ class KeyMap(object):
         elif vk in self.layout_specific_keys:
             if modifiers == ['shift']:
                 return self.layout_specific_keys[vk][1]
-            elif modifiers == ['alt']:
+            elif modifiers == ['option']:
                 return self.layout_specific_keys[vk][2]
-            elif sorted(modifiers) == ['alt', 'shift']:
+            elif sorted(modifiers) == ['option', 'shift']:
                 return self.layout_specific_keys[vk][3]
             return self.layout_specific_keys[vk][0]
         else:

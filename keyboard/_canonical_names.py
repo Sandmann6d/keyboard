@@ -1208,6 +1208,8 @@ canonical_names = {
     "Zsmall": "",
 }
 sided_modifiers = {'ctrl', 'alt', 'shift', 'windows'}
+if platform.system() == 'Darwin':
+    sided_modifiers |= {'option', 'command'}
 all_modifiers = {'alt', 'alt gr', 'ctrl', 'shift', 'windows'} | set('left ' + n for n in sided_modifiers) | set('right ' + n for n in sided_modifiers)
 
 # Platform-specific canonical overrides
@@ -1219,9 +1221,12 @@ if platform.system() == 'Darwin':
         "cmd": "command",
         "win": "command",
         "backspace": "delete",
-        'alt gr': 'alt' # Issue #117
+        'alt gr': 'option',
+        'left alt': 'left option',
+        'right alt': 'right option',
+        'left windows': 'left command',
+        'right windows': 'right command'
     })
-    all_modifiers = {'alt', 'ctrl', 'shift', 'windows'}
 if platform.system() == 'Linux':
     canonical_names.update({
         "select": "end",
