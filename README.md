@@ -1,3 +1,17 @@
+## Fork created for [Drvless by Objentis](https://drvless.com/)
+
+## macOS changes from original repository:
+- Tested on macOS Ventura and macOS Sonoma.
+- Fixed interrupted typing of certain types of strings.
+    - Initial mapping of layout specific keys was fixed. It now also includes 'option+key' and 'option+shift+key' characters.
+    - Typing of characters not present on the keyboard have a fixed minimum delay of 2 ms.
+      If you still encounter the error, please let me know. Try the below command with increased delay.
+      - `keyboard.write('macOS（/ˌmækʔoʊˈɛs/[7]；2011年及之前称 Mac OS X，2012年至2015年称 OS X）', delay=0.002)`
+- 'command' and 'option' keys can be sided (e.g. 'left command'), and also be called by their Windows counterparts, e.g. 'left windows', 'alt'. (Requirement for Drvless)
+
+BELOW IS THE ORIGINAL README
+========
+
 **This project is currently unmaintained. It works for many cases, and I wish to pick it up again in the future, but you might encounter some friction and limited features using it.**
 
 ---

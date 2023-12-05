@@ -1,3 +1,11 @@
+# 0.13.6 (fork by Sandmann6d)
+
+- [Mac] Fix macOS initial mapping of layout specific keys.
+- [Mac] Added 'option+key' and 'option+shift+key' characters to initial mapping.
+- [Mac] Minimum 2 ms delay per character in type_unicode method on non-Windows (affects keyboard.write for characters not present on the keyboard).
+- [Mac] 'command' and 'option' can both be sided. They can also be called by the Windows counterpart 'windows' and 'alt'.
+
+
 # 0.13.5
 
 - Added LICENSE.txt file to PyPI packages.
