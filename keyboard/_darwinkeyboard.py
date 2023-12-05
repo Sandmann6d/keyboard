@@ -216,9 +216,11 @@ class KeyMap(object):
                 return (vk, ['option', 'shift'])
         raise ValueError("Unrecognized character: {}".format(character))
 
-    def vk_to_character(self, vk, modifiers=[]):
+    def vk_to_character(self, vk, modifiers=None):
         """ Returns a character corresponding to the specified scan code (with given
         modifiers applied) """
+        if modifiers is None:
+            modifiers = []
         if vk in self.non_layout_keys:
             # Not a character
             return self.non_layout_keys[vk]
@@ -227,7 +229,7 @@ class KeyMap(object):
                 return self.layout_specific_keys[vk][1]
             elif modifiers == ['option']:
                 return self.layout_specific_keys[vk][2]
-            elif sorted(modifiers) == ['option', 'shift']:
+            elif modifiers == ['option', 'shift']:
                 return self.layout_specific_keys[vk][3]
             return self.layout_specific_keys[vk][0]
         else:
