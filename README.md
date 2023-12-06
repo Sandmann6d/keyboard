@@ -8,7 +8,10 @@
       If you still encounter the error, please let me know. Try the below command with increased delay.
       - `keyboard.write('macOS（/ˌmækʔoʊˈɛs/[7]；2011年及之前称 Mac OS X，2012年至2015年称 OS X）', delay=0.002)`
 - 'command' and 'option' keys can be sided (e.g. 'left command'), and also be called by their Windows counterparts, e.g. 'left windows', 'alt'. (Requirement for Drvless)
+
+Known constraints:
 - It seems the 'right ctrl' key does not exist on a Mac keyboard. `keyboard.press('right ctrl')` will do nothing, please use `keyboard.press('left ctrl')` or `keyboard.press('ctrl')` instead. However, `keyboard.add_hotkey('right ctrl')` can work with an external keyboard.
+
 
 BELOW IS THE ORIGINAL README
 ========
