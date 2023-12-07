@@ -4,8 +4,9 @@ import traceback
 from time import time as now
 from collections import namedtuple
 from ._keyboard_event import KeyboardEvent, KEY_DOWN, KEY_UP
-from ._canonical_names import all_modifiers, normalize_name
+from ._canonical_names import all_modifiers, normalize_name, canonical_names
 from ._nixcommon import EV_KEY, aggregate_devices
+from ._xk_keysyms import XK_KEYSYM_SYMBOLS
 
 # TODO: start by reading current keyboard state, as to not missing any already pressed keys.
 # See: http://stackoverflow.com/questions/3649874/how-to-get-keyboard-state-in-linux
@@ -59,61 +60,62 @@ def register_key(key_and_modifiers, name):
     if key_and_modifiers not in from_name[name]:
         from_name[name].append(key_and_modifiers)
 
+def _register_key_from_xmodmap_keysym(keyname: str, modifiers: tuple[str], keycode: int):
+    if keyname == "NoSymbol":
+        return
+    if len(keyname) == 1:
+        register_key((keycode, modifiers), keyname)
+    elif keyname in canonical_names:
+        register_key((keycode, modifiers), canonical_names[keyname])
+    elif (normalized_name := keyname.lower().replace('_', ' ')) in canonical_names:
+        print(keyname, normalized_name)
+        register_key((keycode, modifiers), canonical_names[normalized_name])
+    elif keyname in XK_KEYSYM_SYMBOLS:
+        register_key((keycode, modifiers), XK_KEYSYM_SYMBOLS[keyname])
+    # elif keyname in KEYS_RENAME_MAP:
+    #     register_key((keycode, modifiers), KEYS_RENAME_MAP[keyname])
+    # elif modifiers == () and re.match("^F\d+$", keyname):
+    #     register_key((keycode, ()), keyname.lower())
+    else:
+        if not keyname.startswith('XF86'):
+            print(f"{keyname} at keycode {keycode} and modifiers {modifiers} was not registered")
+
 def build_tables():
     if to_name and from_name: return
 
-    modifiers_bits = {
-        'shift': 1,
-        'alt gr': 2,
-        'ctrl': 4,
-        'alt': 8,
-    }
-    keycode_template = r'^keycode\s+(\d+)\s+=(.*?)$'
-    try:
-        dump = check_output(['dumpkeys', '--keys-only'], universal_newlines=True)
-    except CalledProcessError as e:
-        if e.returncode == 1:
-            raise ValueError('Failed to run dumpkeys to get key names. Check if your user is part of the "tty" group, and if not, add it with "sudo usermod -a -G tty USER".')
-        else:
-            raise
+    xmodmap_output = check_output('xmodmap -pke', shell=True)
+    # xmodmap command was tested on Ubuntu 20, Red Hat Enterprise 9, Raspberry OS Bullseye, Almalinux 9
+    if isinstance(xmodmap_output, bytes):
+        xmodmap_output = xmodmap_output.decode()
 
+    pattern = re.compile('keycode\s+(\d+) =(.*)')
+    parsed_lines = re.findall(pattern, xmodmap_output)
+    min_keycode = int(parsed_lines[0][0])  # this is 8 and gets subtracted from all keycodes
+    if min_keycode != 8:
+        print(f'Minimum keycode is usually 8. Found value {min_keycode}.')
+    if parsed_lines[0][1] != '':
+        print(f'Minimum keycode should not have symbols assigned. Found symbols {parsed_lines[0][1].strip()}')
 
-    for str_scan_code, str_names in re.findall(keycode_template, dump, re.MULTILINE):
-        scan_code = int(str_scan_code)
-        for i, str_name in enumerate(str_names.strip().split()):
-            modifiers = tuple(sorted(modifier for modifier, bit in modifiers_bits.items() if i & bit))
-            name, is_keypad = cleanup_key(str_name)
-            register_key((scan_code, modifiers), name)
-            if is_keypad:
-                keypad_scan_codes.add(scan_code)
-                register_key((scan_code, modifiers), 'keypad ' + name)
+    for line in parsed_lines[1:]:
+        keycode = int(line[0]) - min_keycode
+        keynames = [name.strip() for name in line[1].split()]
+        # https://wiki.ubuntuusers.de/Xmodmap/
+        # column[0] -> simple keypress
+        # column[1] -> shift + keypress
+        # column[4] -> alt gr + keypress
+        # column[5] -> alt gr + shift + keypress
+        if len(keynames) > 0:
+            _register_key_from_xmodmap_keysym(keynames[0], (), keycode)
+        if len(keynames) > 1:
+            _register_key_from_xmodmap_keysym(keynames[1], ("shift",), keycode)
+        if len(keynames) > 4:
+            _register_key_from_xmodmap_keysym(keynames[4], ("alt gr",), keycode)
+        if len(keynames) > 5:
+            _register_key_from_xmodmap_keysym(keynames[5], ("shift", "alt gr"), keycode)
 
-    # dumpkeys consistently misreports the Windows key, sometimes
-    # skipping it completely or reporting as 'alt. 125 = left win,
-    # 126 = right win.
-    if (125, ()) not in to_name or to_name[(125, ())] == ['alt']:
-        to_name[(125, ())].clear()
-        if (125, ()) in from_name['alt']:
-            from_name['alt'].remove((125, ()))
-        register_key((125, ()), 'windows')
-    if (126, ()) not in to_name or to_name[(126, ())] == ['alt']:
-        to_name[(126, ())].clear()
-        if (126, ()) in from_name['alt']:
-            from_name['alt'].remove((126, ()))
-        register_key((126, ()), 'windows')
-
-    # The menu key is usually skipped altogether, so we also add it manually.
-    if (127, ()) not in to_name:
-        register_key((127, ()), 'menu')
-
-    synonyms_template = r'^(\S+)\s+for (.+)$'
-    dump = check_output(['dumpkeys', '--long-info'], universal_newlines=True)
-    for synonym_str, original_str in re.findall(synonyms_template, dump, re.MULTILINE):
-        synonym, _ = cleanup_key(synonym_str)
-        original, _ = cleanup_key(original_str)
-        if synonym != original:
-            from_name[original].extend(from_name[synonym])
-            from_name[synonym].extend(from_name[original])
+    print(to_name)
+    print(from_name)
+    a = 0
 
 device = None
 def build_device():

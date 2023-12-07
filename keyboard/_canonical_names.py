@@ -1227,6 +1227,21 @@ if platform.system() == 'Darwin':
         'left windows': 'left command',
         'right windows': 'right command'
     })
+xmodmap_keysym_mapping = {
+    "super l": "left windows",
+    "super r": "right windows",
+    "shift l": "left shift",
+    "shift r": "right shift",
+    "control l": "left ctrl",
+    "control r": "right ctrl",
+    "alt l": "alt",
+    "iso left tab": "shift tab", #?
+    "iso level3 shift": "alt gr",
+    "kp up": "page up",
+    "kp down": "page down",
+    "space": "space",
+    "up": "up"
+}
 if platform.system() == 'Linux':
     canonical_names.update({
         "select": "end",
@@ -1234,6 +1249,8 @@ if platform.system() == 'Linux':
         'next': 'page down',
         'prior': 'page up',
     })
+    canonical_names.update(xmodmap_keysym_mapping)
+
 
 def normalize_name(name):
     """
@@ -1243,9 +1260,9 @@ def normalize_name(name):
     if not name or not isinstance(name, basestring):
         raise ValueError('Can only normalize non-empty string names. Unexpected '+ repr(name))
 
-    if len(name) > 1:
+    if len(name) > 1 and name:
         name = name.lower()
-    if name != '_' and '_' in name:
+    if name != '_' and '_' in name and name not in xmodmap_keysym_mapping:
         name = name.replace('_', ' ')
 
     return canonical_names.get(name, name)
